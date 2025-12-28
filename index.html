@@ -175,10 +175,16 @@
 
     <div class="controls">
         <div class="slider-container">
-            <span class="slider-label">Количество сторон:</span>
+            <span class="slider-label">До 1000:</span>
             <button class="step-btn" id="stepMinus">-</button>
             <input type="range" id="sidesSlider" min="1" max="1000" value="3">
             <button class="step-btn" id="stepPlus">+</button>
+        </div>
+        <div class="slider-container">
+            <span class="slider-label">До 1 000 000:</span>
+            <button class="step-btn" id="stepMinus2">-</button>
+            <input type="range" id="sidesSlider2" min="1" max="1000000" value="3">
+            <button class="step-btn" id="stepPlus2">+</button>
             <span class="sides-count" id="sidesCount">3</span>
         </div>
         <div class="shape-name" id="shapeName">Треугольник</div>
@@ -203,6 +209,7 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const slider = document.getElementById('sidesSlider');
+        const slider2 = document.getElementById('sidesSlider2');
         const sidesCountEl = document.getElementById('sidesCount');
         const shapeNameEl = document.getElementById('shapeName');
         const angleInfoEl = document.getElementById('angleInfo');
@@ -305,9 +312,15 @@
             }
 
             // Вычисляем точки многоугольника
+            // Для очень больших чисел ограничиваем количество точек для производительности
+            const maxDrawPoints = 5000;
+            const step = sides > maxDrawPoints ? Math.ceil(sides / maxDrawPoints) : 1;
+            const actualPoints = Math.ceil(sides / step);
+
             const points = [];
-            for (let i = 0; i < sides; i++) {
-                const angle = (i * 2 * Math.PI / sides) - Math.PI / 2; // Начинаем сверху
+            for (let i = 0; i < actualPoints; i++) {
+                const idx = i * step;
+                const angle = (idx * 2 * Math.PI / sides) - Math.PI / 2; // Начинаем сверху
                 points.push({
                     x: centerX + radius * Math.cos(angle),
                     y: centerY + radius * Math.sin(angle)
@@ -315,25 +328,27 @@
             }
 
             // Рисуем линии от центра к точкам (для наглядности деления)
-            // Линия к точке i появляется когда точка i начинает появляться
-            ctx.strokeStyle = colors.line;
-            ctx.lineWidth = 1;
-            for (let i = 0; i < sides; i++) {
-                let lineProgress = 0;
-                if (i === 0) {
-                    lineProgress = animationProgress > 0 ? 1 : 0;
-                } else {
-                    lineProgress = completedSegments >= i ? 1 : (completedSegments === i - 1 ? currentSegmentProgress : 0);
-                }
+            // Только для небольшого количества сторон (до 50)
+            if (sides <= 50) {
+                ctx.strokeStyle = colors.line;
+                ctx.lineWidth = 1;
+                for (let i = 0; i < sides; i++) {
+                    let lineProgress = 0;
+                    if (i === 0) {
+                        lineProgress = animationProgress > 0 ? 1 : 0;
+                    } else {
+                        lineProgress = completedSegments >= i ? 1 : (completedSegments === i - 1 ? currentSegmentProgress : 0);
+                    }
 
-                if (lineProgress > 0) {
-                    ctx.beginPath();
-                    ctx.moveTo(toScreenX(centerX), toScreenY(centerY));
-                    ctx.lineTo(
-                        toScreenX(centerX + (points[i].x - centerX) * lineProgress),
-                        toScreenY(centerY + (points[i].y - centerY) * lineProgress)
-                    );
-                    ctx.stroke();
+                    if (lineProgress > 0) {
+                        ctx.beginPath();
+                        ctx.moveTo(toScreenX(centerX), toScreenY(centerY));
+                        ctx.lineTo(
+                            toScreenX(centerX + (points[i].x - centerX) * lineProgress),
+                            toScreenY(centerY + (points[i].y - centerY) * lineProgress)
+                        );
+                        ctx.stroke();
+                    }
                 }
             }
 
@@ -342,30 +357,39 @@
                 ctx.beginPath();
                 ctx.moveTo(toScreenX(points[0].x), toScreenY(points[0].y));
 
-                // Рисуем завершённые сегменты
-                for (let i = 1; i <= Math.min(completedSegments, sides - 1); i++) {
-                    ctx.lineTo(toScreenX(points[i].x), toScreenY(points[i].y));
-                }
-
-                // Частичная линия текущего сегмента
-                if (completedSegments < sides - 1 && currentSegmentProgress > 0) {
-                    // Сегмент между точками
-                    const prevIdx = completedSegments;
-                    const nextIdx = completedSegments + 1;
-                    const px = points[prevIdx].x + (points[nextIdx].x - points[prevIdx].x) * currentSegmentProgress;
-                    const py = points[prevIdx].y + (points[nextIdx].y - points[prevIdx].y) * currentSegmentProgress;
-                    ctx.lineTo(toScreenX(px), toScreenY(py));
-                } else if (completedSegments === sides - 1) {
-                    // Замыкающий сегмент (от последней точки к первой)
-                    const prevIdx = sides - 1;
-                    const px = points[prevIdx].x + (points[0].x - points[prevIdx].x) * currentSegmentProgress;
-                    const py = points[prevIdx].y + (points[0].y - points[prevIdx].y) * currentSegmentProgress;
-                    ctx.lineTo(toScreenX(px), toScreenY(py));
-                } else if (completedSegments >= sides) {
-                    // Полностью замкнут
+                // Для больших чисел (step > 1) просто рисуем все точки
+                if (step > 1) {
+                    for (let i = 1; i < actualPoints; i++) {
+                        ctx.lineTo(toScreenX(points[i].x), toScreenY(points[i].y));
+                    }
                     ctx.closePath();
                     ctx.fillStyle = colors.polygon;
                     ctx.fill();
+                } else {
+                    // Анимация для небольшого количества сторон
+                    // Рисуем завершённые сегменты
+                    for (let i = 1; i <= Math.min(completedSegments, sides - 1); i++) {
+                        ctx.lineTo(toScreenX(points[i].x), toScreenY(points[i].y));
+                    }
+
+                    // Частичная линия текущего сегмента
+                    if (completedSegments < sides - 1 && currentSegmentProgress > 0) {
+                        const prevIdx = completedSegments;
+                        const nextIdx = completedSegments + 1;
+                        const px = points[prevIdx].x + (points[nextIdx].x - points[prevIdx].x) * currentSegmentProgress;
+                        const py = points[prevIdx].y + (points[nextIdx].y - points[prevIdx].y) * currentSegmentProgress;
+                        ctx.lineTo(toScreenX(px), toScreenY(py));
+                    } else if (completedSegments === sides - 1) {
+                        // Замыкающий сегмент
+                        const prevIdx = sides - 1;
+                        const px = points[prevIdx].x + (points[0].x - points[prevIdx].x) * currentSegmentProgress;
+                        const py = points[prevIdx].y + (points[0].y - points[prevIdx].y) * currentSegmentProgress;
+                        ctx.lineTo(toScreenX(px), toScreenY(py));
+                    } else if (completedSegments >= sides) {
+                        ctx.closePath();
+                        ctx.fillStyle = colors.polygon;
+                        ctx.fill();
+                    }
                 }
 
                 ctx.strokeStyle = colors.polygonBorder;
@@ -374,14 +398,13 @@
             }
 
             // Рисуем точки (с учётом прозрачности)
-            // Точка i видна когда сегмент i-1 завершён (точка 0 видна сразу)
-            if (pointsOpacity > 0.01) {
+            // Только для небольшого количества сторон (до 50)
+            if (pointsOpacity > 0.01 && sides <= 50) {
                 for (let i = 0; i < sides; i++) {
                     let pointVisible = 0;
                     if (i === 0) {
                         pointVisible = animationProgress > 0 ? 1 : 0;
                     } else {
-                        // Точка появляется когда её сегмент достигает её
                         pointVisible = completedSegments >= i ? 1 : (completedSegments === i - 1 ? currentSegmentProgress : 0);
                     }
 
@@ -443,9 +466,17 @@
             }
             targetSides = newSides;
             currentSides = newSides;
-            animationProgress = 0;
             pointsOpacity = 1;
-            animate();
+
+            // Для больших чисел (>100) отключаем анимацию построения
+            if (newSides > 100) {
+                animationProgress = 1;
+                drawScene();
+                startFadeOut();
+            } else {
+                animationProgress = 0;
+                animate();
+            }
         }
 
         function updateInfo(sides) {
@@ -455,29 +486,56 @@
             angleInfoEl.textContent = sides < 3 ? 'нет' : `${angle.toFixed(2)}°`;
         }
 
+        // Функция для установки значения на обоих ползунках
+        function setSides(sides) {
+            slider.value = Math.min(sides, 1000);
+            slider2.value = sides;
+            updateInfo(sides);
+            startAnimation(sides);
+        }
+
         // Обработчики событий
         slider.addEventListener('input', (e) => {
             const sides = parseInt(e.target.value);
+            slider2.value = sides;
             updateInfo(sides);
             startAnimation(sides);
         });
 
-        // Кнопки +/- для точной настройки
+        slider2.addEventListener('input', (e) => {
+            const sides = parseInt(e.target.value);
+            slider.value = Math.min(sides, 1000);
+            updateInfo(sides);
+            startAnimation(sides);
+        });
+
+        // Кнопки +/- для первого ползунка (до 1000)
         document.getElementById('stepPlus').addEventListener('click', () => {
-            const current = parseInt(slider.value);
+            const current = parseInt(slider2.value);
             if (current < 1000) {
-                slider.value = current + 1;
-                updateInfo(current + 1);
-                startAnimation(current + 1);
+                setSides(current + 1);
             }
         });
 
         document.getElementById('stepMinus').addEventListener('click', () => {
-            const current = parseInt(slider.value);
+            const current = parseInt(slider2.value);
             if (current > 1) {
-                slider.value = current - 1;
-                updateInfo(current - 1);
-                startAnimation(current - 1);
+                setSides(current - 1);
+            }
+        });
+
+        // Кнопки +/- для второго ползунка (до 1 000 000)
+        document.getElementById('stepPlus2').addEventListener('click', () => {
+            const current = parseInt(slider2.value);
+            if (current < 1000000) {
+                setSides(current + 1);
+            }
+        });
+
+        document.getElementById('stepMinus2').addEventListener('click', () => {
+            const current = parseInt(slider2.value);
+            if (current > 1) {
+                setSides(current - 1);
             }
         });
 
