@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Волшебные Многоугольники</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: white;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .controls {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px 40px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .step-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 1.5em;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .step-btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.1);
+        }
+
+        .step-btn:active {
+            transform: scale(0.95);
+        }
+
+        .slider-label {
+            font-size: 1.2em;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .sides-count {
+            font-size: 3em;
+            font-weight: bold;
+            color: #feca57;
+            text-shadow: 0 0 20px rgba(254, 202, 87, 0.5);
+        }
+
+        input[type="range"] {
+            width: 400px;
+            height: 15px;
+            -webkit-appearance: none;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb);
+            border-radius: 10px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 30px;
+            height: 30px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+        }
+
+        .canvas-container {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        canvas {
+            display: block;
+            background: radial-gradient(circle at center, #1a1a2e 0%, #0a0a15 100%);
+            cursor: grab;
+        }
+
+        canvas:active {
+            cursor: grabbing;
+        }
+
+        .info {
+            margin-top: 15px;
+            font-size: 1.1em;
+            opacity: 0.8;
+            text-align: center;
+        }
+
+        .zoom-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .zoom-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 2em;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .zoom-btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.1);
+        }
+
+        .shape-name {
+            font-size: 1.5em;
+            color: #48dbfb;
+            margin-top: 5px;
+        }
+
+        .hint {
+            font-size: 0.9em;
+            opacity: 0.6;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Волшебные Многоугольники</h1>
+
+    <div class="controls">
+        <div class="slider-container">
+            <span class="slider-label">Количество сторон:</span>
+            <button class="step-btn" id="stepMinus">-</button>
+            <input type="range" id="sidesSlider" min="1" max="1000" value="3">
+            <button class="step-btn" id="stepPlus">+</button>
+            <span class="sides-count" id="sidesCount">3</span>
+        </div>
+        <div class="shape-name" id="shapeName">Треугольник</div>
+        <div class="zoom-controls">
+            <button class="zoom-btn" id="zoomOut">-</button>
+            <button class="zoom-btn" id="zoomIn">+</button>
+            <button class="zoom-btn" id="resetView">R</button>
+        </div>
+        <div class="hint">Колёсико мыши для приближения, перетаскивайте для перемещения</div>
+    </div>
+
+    <div class="canvas-container">
+        <canvas id="canvas" width="800" height="600"></canvas>
+    </div>
+
+    <div class="info">
+        <p>Угол многоугольника: <span id="angleInfo">60°</span></p>
+        <p>Чем больше сторон, тем больше фигура похожа на круг!</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const slider = document.getElementById('sidesSlider');
+        const sidesCountEl = document.getElementById('sidesCount');
+        const shapeNameEl = document.getElementById('shapeName');
+        const angleInfoEl = document.getElementById('angleInfo');
+
+        // Параметры отображения
+        let zoom = 1;
+        let offsetX = 0;
+        let offsetY = 0;
+        let isDragging = false;
+        let lastMouseX, lastMouseY;
+
+        // Параметры анимации
+        let currentSides = 3;
+        let targetSides = 3;
+        let animationProgress = 1;
+        let animationId = null;
+        let pointsOpacity = 1;
+        let fadeTimeout = null;
+
+        // Цвета для красоты
+        const colors = {
+            circle: 'rgba(72, 219, 251, 0.3)',
+            circleBorder: 'rgba(72, 219, 251, 0.8)',
+            polygon: 'rgba(254, 202, 87, 0.3)',
+            polygonBorder: '#feca57',
+            point: '#ff6b6b',
+            line: 'rgba(255, 107, 107, 0.5)',
+            text: 'white'
+        };
+
+        // Названия фигур
+        const shapeNames = {
+            1: 'Точка',
+            2: 'Линия',
+            3: 'Треугольник',
+            4: 'Квадрат',
+            5: 'Пятиугольник',
+            6: 'Шестиугольник',
+            7: 'Семиугольник',
+            8: 'Восьмиугольник',
+            9: 'Девятиугольник',
+            10: 'Десятиугольник',
+            12: 'Двенадцатиугольник',
+            100: 'Стоугольник',
+            1000: 'Тысячеугольник'
+        };
+
+        function getShapeName(n) {
+            if (shapeNames[n]) return shapeNames[n];
+            if (n <= 10) return `${n}-угольник`;
+            if (n < 100) return `${n}-угольник`;
+            return `${n}-угольник`;
+        }
+
+        function getInternalAngle(n) {
+            if (n < 3) return 0;
+            return ((n - 2) * 180) / n;
+        }
+
+        function toScreenX(x) {
+            return canvas.width / 2 + (x + offsetX) * zoom;
+        }
+
+        function toScreenY(y) {
+            return canvas.height / 2 + (y + offsetY) * zoom;
+        }
+
+        function drawScene() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const centerX = 0;
+            const centerY = 0;
+            const radius = 200;
+
+            // Рисуем направляющий круг
+            ctx.beginPath();
+            ctx.arc(toScreenX(centerX), toScreenY(centerY), radius * zoom, 0, Math.PI * 2);
+            ctx.fillStyle = colors.circle;
+            ctx.fill();
+            ctx.strokeStyle = colors.circleBorder;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Вычисляем количество точек для анимации
+            const sides = Math.max(1, Math.round(currentSides));
+
+            // Вычисляем прогресс сегментов
+            const totalSegments = sides;
+            const segmentProgress = animationProgress * totalSegments;
+            const completedSegments = Math.floor(segmentProgress);
+            const currentSegmentProgress = segmentProgress - completedSegments;
+
+            if (sides === 1) {
+                // Одна точка в центре
+                ctx.beginPath();
+                ctx.arc(toScreenX(centerX), toScreenY(centerY - radius), 10 * zoom, 0, Math.PI * 2);
+                ctx.fillStyle = colors.point;
+                ctx.fill();
+                return;
+            }
+
+            // Вычисляем точки многоугольника
+            const points = [];
+            for (let i = 0; i < sides; i++) {
+                const angle = (i * 2 * Math.PI / sides) - Math.PI / 2; // Начинаем сверху
+                points.push({
+                    x: centerX + radius * Math.cos(angle),
+                    y: centerY + radius * Math.sin(angle)
+                });
+            }
+
+            // Рисуем линии от центра к точкам (для наглядности деления)
+            // Линия к точке i появляется когда точка i начинает появляться
+            ctx.strokeStyle = colors.line;
+            ctx.lineWidth = 1;
+            for (let i = 0; i < sides; i++) {
+                let lineProgress = 0;
+                if (i === 0) {
+                    lineProgress = animationProgress > 0 ? 1 : 0;
+                } else {
+                    lineProgress = completedSegments >= i ? 1 : (completedSegments === i - 1 ? currentSegmentProgress : 0);
+                }
+
+                if (lineProgress > 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(toScreenX(centerX), toScreenY(centerY));
+                    ctx.lineTo(
+                        toScreenX(centerX + (points[i].x - centerX) * lineProgress),
+                        toScreenY(centerY + (points[i].y - centerY) * lineProgress)
+                    );
+                    ctx.stroke();
+                }
+            }
+
+            // Рисуем многоугольник
+            if (sides >= 2 && segmentProgress > 0) {
+                ctx.beginPath();
+                ctx.moveTo(toScreenX(points[0].x), toScreenY(points[0].y));
+
+                // Рисуем завершённые сегменты
+                for (let i = 1; i <= Math.min(completedSegments, sides - 1); i++) {
+                    ctx.lineTo(toScreenX(points[i].x), toScreenY(points[i].y));
+                }
+
+                // Частичная линия текущего сегмента
+                if (completedSegments < sides - 1 && currentSegmentProgress > 0) {
+                    // Сегмент между точками
+                    const prevIdx = completedSegments;
+                    const nextIdx = completedSegments + 1;
+                    const px = points[prevIdx].x + (points[nextIdx].x - points[prevIdx].x) * currentSegmentProgress;
+                    const py = points[prevIdx].y + (points[nextIdx].y - points[prevIdx].y) * currentSegmentProgress;
+                    ctx.lineTo(toScreenX(px), toScreenY(py));
+                } else if (completedSegments === sides - 1) {
+                    // Замыкающий сегмент (от последней точки к первой)
+                    const prevIdx = sides - 1;
+                    const px = points[prevIdx].x + (points[0].x - points[prevIdx].x) * currentSegmentProgress;
+                    const py = points[prevIdx].y + (points[0].y - points[prevIdx].y) * currentSegmentProgress;
+                    ctx.lineTo(toScreenX(px), toScreenY(py));
+                } else if (completedSegments >= sides) {
+                    // Полностью замкнут
+                    ctx.closePath();
+                    ctx.fillStyle = colors.polygon;
+                    ctx.fill();
+                }
+
+                ctx.strokeStyle = colors.polygonBorder;
+                ctx.lineWidth = 3 * Math.min(zoom, 2);
+                ctx.stroke();
+            }
+
+            // Рисуем точки (с учётом прозрачности)
+            // Точка i видна когда сегмент i-1 завершён (точка 0 видна сразу)
+            if (pointsOpacity > 0.01) {
+                for (let i = 0; i < sides; i++) {
+                    let pointVisible = 0;
+                    if (i === 0) {
+                        pointVisible = animationProgress > 0 ? 1 : 0;
+                    } else {
+                        // Точка появляется когда её сегмент достигает её
+                        pointVisible = completedSegments >= i ? 1 : (completedSegments === i - 1 ? currentSegmentProgress : 0);
+                    }
+
+                    if (pointVisible > 0.1) {
+                        ctx.beginPath();
+                        ctx.arc(toScreenX(points[i].x), toScreenY(points[i].y), Math.max(4, 8 * Math.min(zoom, 2)) * pointVisible, 0, Math.PI * 2);
+                        ctx.fillStyle = `rgba(255, 107, 107, ${pointsOpacity * pointVisible})`;
+                        ctx.fill();
+                        ctx.strokeStyle = `rgba(255, 255, 255, ${pointsOpacity * pointVisible})`;
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // Показываем центр
+            ctx.beginPath();
+            ctx.arc(toScreenX(centerX), toScreenY(centerY), 5 * Math.min(zoom, 2), 0, Math.PI * 2);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+        }
+
+        function fadeOutPoints() {
+            if (pointsOpacity > 0) {
+                pointsOpacity -= 0.05;
+                if (pointsOpacity < 0) pointsOpacity = 0;
+                drawScene();
+                if (pointsOpacity > 0) {
+                    requestAnimationFrame(fadeOutPoints);
+                }
+            }
+        }
+
+        function startFadeOut() {
+            if (fadeTimeout) clearTimeout(fadeTimeout);
+            fadeTimeout = setTimeout(() => {
+                fadeOutPoints();
+            }, 1000);
+        }
+
+        function animate() {
+            if (animationProgress < 1) {
+                animationProgress += 0.007;
+                if (animationProgress > 1) {
+                    animationProgress = 1;
+                    startFadeOut();
+                }
+                drawScene();
+                animationId = requestAnimationFrame(animate);
+            }
+        }
+
+        function startAnimation(newSides) {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            if (fadeTimeout) {
+                clearTimeout(fadeTimeout);
+            }
+            targetSides = newSides;
+            currentSides = newSides;
+            animationProgress = 0;
+            pointsOpacity = 1;
+            animate();
+        }
+
+        function updateInfo(sides) {
+            sidesCountEl.textContent = sides;
+            shapeNameEl.textContent = getShapeName(sides);
+            const angle = getInternalAngle(sides);
+            angleInfoEl.textContent = sides < 3 ? 'нет' : `${angle.toFixed(2)}°`;
+        }
+
+        // Обработчики событий
+        slider.addEventListener('input', (e) => {
+            const sides = parseInt(e.target.value);
+            updateInfo(sides);
+            startAnimation(sides);
+        });
+
+        // Кнопки +/- для точной настройки
+        document.getElementById('stepPlus').addEventListener('click', () => {
+            const current = parseInt(slider.value);
+            if (current < 1000) {
+                slider.value = current + 1;
+                updateInfo(current + 1);
+                startAnimation(current + 1);
+            }
+        });
+
+        document.getElementById('stepMinus').addEventListener('click', () => {
+            const current = parseInt(slider.value);
+            if (current > 1) {
+                slider.value = current - 1;
+                updateInfo(current - 1);
+                startAnimation(current - 1);
+            }
+        });
+
+        // Масштабирование колёсиком мыши
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+
+            // Позиция мыши относительно центра canvas
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left - canvas.width / 2;
+            const mouseY = e.clientY - rect.top - canvas.height / 2;
+
+            // Корректируем offset чтобы зум был к точке под курсором
+            offsetX = mouseX / zoom - (mouseX / (zoom * zoomFactor) - offsetX);
+            offsetY = mouseY / zoom - (mouseY / (zoom * zoomFactor) - offsetY);
+
+            zoom *= zoomFactor;
+            zoom = Math.max(0.1, Math.min(50, zoom));
+
+            drawScene();
+        });
+
+        // Перетаскивание
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const deltaX = e.clientX - lastMouseX;
+                const deltaY = e.clientY - lastMouseY;
+                offsetX += deltaX / zoom;
+                offsetY += deltaY / zoom;
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+                drawScene();
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            isDragging = false;
+        });
+
+        // Кнопки управления
+        document.getElementById('zoomIn').addEventListener('click', () => {
+            zoom *= 1.5;
+            zoom = Math.min(50, zoom);
+            drawScene();
+        });
+
+        document.getElementById('zoomOut').addEventListener('click', () => {
+            zoom *= 0.7;
+            zoom = Math.max(0.1, zoom);
+            drawScene();
+        });
+
+        document.getElementById('resetView').addEventListener('click', () => {
+            zoom = 1;
+            offsetX = 0;
+            offsetY = 0;
+            drawScene();
+        });
+
+        // Touch-события для мобильных
+        let lastTouchDistance = 0;
+
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                isDragging = true;
+                lastMouseX = e.touches[0].clientX;
+                lastMouseY = e.touches[0].clientY;
+            } else if (e.touches.length === 2) {
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                lastTouchDistance = Math.sqrt(dx * dx + dy * dy);
+            }
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (e.touches.length === 1 && isDragging) {
+                const deltaX = e.touches[0].clientX - lastMouseX;
+                const deltaY = e.touches[0].clientY - lastMouseY;
+                offsetX += deltaX / zoom;
+                offsetY += deltaY / zoom;
+                lastMouseX = e.touches[0].clientX;
+                lastMouseY = e.touches[0].clientY;
+                drawScene();
+            } else if (e.touches.length === 2) {
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (lastTouchDistance > 0) {
+                    zoom *= distance / lastTouchDistance;
+                    zoom = Math.max(0.1, Math.min(50, zoom));
+                    drawScene();
+                }
+                lastTouchDistance = distance;
+            }
+        });
+
+        canvas.addEventListener('touchend', () => {
+            isDragging = false;
+            lastTouchDistance = 0;
+        });
+
+        // Начальная отрисовка
+        updateInfo(3);
+        startAnimation(3);
+    </script>
+</body>
+</html>
