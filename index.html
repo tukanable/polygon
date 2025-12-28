@@ -333,22 +333,10 @@
                 ctx.strokeStyle = colors.line;
                 ctx.lineWidth = 1;
                 for (let i = 0; i < sides; i++) {
-                    let lineProgress = 0;
-                    if (i === 0) {
-                        lineProgress = animationProgress > 0 ? 1 : 0;
-                    } else {
-                        lineProgress = completedSegments >= i ? 1 : (completedSegments === i - 1 ? currentSegmentProgress : 0);
-                    }
-
-                    if (lineProgress > 0) {
-                        ctx.beginPath();
-                        ctx.moveTo(toScreenX(centerX), toScreenY(centerY));
-                        ctx.lineTo(
-                            toScreenX(centerX + (points[i].x - centerX) * lineProgress),
-                            toScreenY(centerY + (points[i].y - centerY) * lineProgress)
-                        );
-                        ctx.stroke();
-                    }
+                    ctx.beginPath();
+                    ctx.moveTo(toScreenX(centerX), toScreenY(centerY));
+                    ctx.lineTo(toScreenX(points[i].x), toScreenY(points[i].y));
+                    ctx.stroke();
                 }
             }
 
