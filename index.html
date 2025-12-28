@@ -328,9 +328,8 @@
             }
 
             // Рисуем линии от центра к точкам (для наглядности деления)
-            // Ограничиваем количество линий для производительности
-            const maxLines = 100;
-            const lineStep = sides > maxLines ? Math.ceil(sides / maxLines) : 1;
+            const maxLines = 1000000;
+            const lineStep = sides > maxLines ? Math.floor(sides / maxLines) || 1 : 1;
             ctx.strokeStyle = colors.line;
             ctx.lineWidth = 1;
             for (let i = 0; i < sides; i += lineStep) {
