@@ -328,16 +328,19 @@
             }
 
             // Рисуем линии от центра к точкам (для наглядности деления)
-            // Только для небольшого количества сторон (до 50)
-            if (sides <= 50) {
-                ctx.strokeStyle = colors.line;
-                ctx.lineWidth = 1;
-                for (let i = 0; i < sides; i++) {
-                    ctx.beginPath();
-                    ctx.moveTo(toScreenX(centerX), toScreenY(centerY));
-                    ctx.lineTo(toScreenX(points[i].x), toScreenY(points[i].y));
-                    ctx.stroke();
-                }
+            // Ограничиваем количество линий для производительности
+            const maxLines = 100;
+            const lineStep = sides > maxLines ? Math.ceil(sides / maxLines) : 1;
+            ctx.strokeStyle = colors.line;
+            ctx.lineWidth = 1;
+            for (let i = 0; i < sides; i += lineStep) {
+                const angle = (i * 2 * Math.PI / sides) - Math.PI / 2;
+                const px = centerX + radius * Math.cos(angle);
+                const py = centerY + radius * Math.sin(angle);
+                ctx.beginPath();
+                ctx.moveTo(toScreenX(centerX), toScreenY(centerY));
+                ctx.lineTo(toScreenX(px), toScreenY(py));
+                ctx.stroke();
             }
 
             // Рисуем многоугольник
